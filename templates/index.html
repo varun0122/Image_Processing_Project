@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, #00b4db, #0083b0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #ced4da;
+            transition: box-shadow 0.3s, transform 0.3s;
+        }
+
+        .container:hover {
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+            transform: scale(1.02);
+        }
+
+        .container h1 {
+            margin-bottom: 20px;
+            font-size: 32px;
+            color: #343a40;
+            font-weight: bold;
+        }
+
+        .container p {
+            font-size: 18px;
+            color: #495057;
+            margin-bottom: 30px;
+        }
+
+        .file-upload {
+            margin-bottom: 20px;
+        }
+
+        .file-upload input[type="file"] {
+            display: block;
+            margin: 0 auto;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            font-size: 16px;
+            color: #495057;
+            background: #f8f9fa;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+
+        .file-upload input[type="file"]:focus {
+            border-color: #007bff;
+            background-color: #ffffff;
+        }
+
+        .file-upload button {
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .file-upload button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .status {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #343a40;
+            text-align: left;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .status p {
+            margin: 10px 0;
+        }
+
+        .status a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .status a:hover {
+            text-decoration: underline;
+        }
+
+        .status button {
+            background-color: #28a745;
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-right: 10px;
+        }
+
+        .status button:hover {
+            background-color: #218838;
+            transform: scale(1.05);
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload CSV for Image Processing</h1>
+        <p>Please upload a CSV file containing image URLs for processing. Once the file is processed, you can check the status and download the output CSV.</p>
+        <div class="file-upload">
+            <input type="file" id="csvFile" accept=".csv">
+            <button id="submitBtn">Submit</button>
+        </div>
+        <div id="statusContainer" class="status"></div>
+    </div>
+
+    <script>
+        document.getElementById('submitBtn').addEventListener('click', async function() {
+            const csvFile = document.getElementById('csvFile').files[0];
+            if (!csvFile) {
+                document.getElementById('statusContainer').innerHTML = `
+                    <p class="error">Please select a CSV file to upload.</p>
+                `;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', csvFile);
+
+            try {
+                const response = await fetch('/submit_file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const requestId = data.request_id;
+                    document.getElementById('statusContainer').innerHTML = `
+                        <p>Your request ID: <strong>${requestId}</strong></p>
+                        <button onclick="checkStatus('${requestId}')">Check Status</button>
+                        <button onclick="generateOutputCSV('${requestId}')">Generate Output CSV</button>
+                    `;
+                } else {
+                    throw new Error('Failed to submit file.');
+                }
+            } catch (error) {
+                document.getElementById('statusContainer').innerHTML = `
+                    <p class="error">Error: ${error.message}</p>
+                `;
+            }
+        });
+
+        async function checkStatus(requestId) {
+            try {
+                const response = await fetch(`/check_status?request_id=${requestId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('statusContainer').innerHTML = `
+                        <p>Status for request ID <strong>${requestId}</strong>: ${data.status}</p>
+                    `;
+                } else {
+                    throw new Error('Failed to retrieve status.');
+                }
+            } catch (error) {
+                document.getElementById('statusContainer').innerHTML = `
+                    <p class="error">Error: ${error.message}</p>
+                `;
+            }
+        }
+
+        async function generateOutputCSV(requestId) {
+            try {
+                const response = await fetch(`/generate_output_csv?request_id=${requestId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('statusContainer').innerHTML = `
+                        <p>Output CSV generated. <a href="${data.output_csv_path}" target="_blank">Download here</a></p>
+                    `;
+                } else {
+                    throw new Error('Failed to generate output CSV.');
+                }
+            } catch (error) {
+                document.getElementById('statusContainer').innerHTML = `
+                    <p class="error">Error: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+Flask
+pandas
+pillow
+aiohttp
+mysql-connector-python
